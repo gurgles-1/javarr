@@ -1,41 +1,38 @@
 # JavArr
 
-A Violentmonkey/Tampermonkey userscript that turns JavStash and StashDB
-pages into Prowlarr grabs — automated where the catalog is code-addressed
-(JAV), carefully manual where it isn't (western scenes).
+A Violentmonkey/Tampermonkey userscript that wires JavStash and StashDB
+scene pages directly to **Whisparr** — status, adds, searches and grabs,
+without leaving the page. (v3.0.0 replaced the old Prowlarr backend with
+Whisparr entirely.)
 
 ## What it does
 
-**JavStash (automated)**
-- Scene pages: an **Auto-Grab (Code)** button. Searches Prowlarr for the
-  scene's code in all its forms (hyphenated, no-separator, unpadded),
-  treats an exact code match as decisive, and grabs the best release
-  (resolution first, then seeders/grabs, with a minimum-size floor).
-- Listing pages: a **Batch Grab** button with a confirmation step and a
-  **Scan only** dry-run mode. Every scene is checked against your skip
-  list, your Stash library, and your Prowlarr grab history before anything
-  is grabbed; the run ends with a full tally and an explicit miss list.
-- Per-card **⬇ buttons** on grids for one-off grabs without a full batch.
+**Scene pages (both sites)**
+- One **Whisparr** button opens a status panel: already in Whisparr?
+  Has a file? In your Stash library? On your skip list?
+- Not in Whisparr yet: **Add to Whisparr + Search** or **Add only**
+  (monitored, with your chosen root folder + quality profile — you're
+  asked once, on the first add, and can reset it from the menu).
+- In Whisparr without a file: **Search in Whisparr now** fires
+  Whisparr's own automatic search, and **Show releases** lists what its
+  indexers return — grouped by resolution, with Whisparr's rejection
+  reasons shown — for a manual grab straight from the panel.
 
-**StashDB (full support, manual picks)**
-- Scene pages: a **Search Prowlarr** button running a staged, escalating
-  search — stage 1 fires five parallel queries (performers/studio/date/
-  title combinations), **Try Harder** widens to the parent studio and
-  performer aliases, **Last Chance** runs an unfiltered performer-only
-  sweep sorted by publish-date proximity. Results are scored against five
-  facts (studio, performers, title, date, code), accent-folded so "Zoë"
-  matches "Zoe", and grouped by resolution.
-- Listing pages: per-card buttons open the same staged search in a panel.
+**Listing pages**
+- **Batch Add** with a confirmation step and a **Scan only** dry run.
+  Every scene is checked against your skip list, your Stash library and
+  Whisparr's library first; the run ends with a full tally (added / has
+  file / in Whisparr / owned / skip-list / not in metadata / errors).
+- Per-card buttons with live state: **✓** with resolution = in your
+  Stash, **✓ file** / **＝ in Whisparr** from Whisparr's inventory,
+  **⬇** = click to add (+ search).
 
-**Both sites**
-- **Stash-owned badges**: with Stash configured, scenes already in your
-  library show a green **✓ <resolution>** badge on cards and a banner on
-  scene pages (one GraphQL query per page, not per scene), and automation
-  never re-grabs what you own.
-- **History-aware**: codes already grabbed through Prowlarr are detected
-  and skipped by automation; manual override is always one click away.
-- **Skip list**: codes automation must never touch (editable from the
-  Violentmonkey menu, or per-scene via "Exclude this code").
+**JavStash bridging**
+- Whisparr's metadata provider is StashDB, so JavStash scenes are
+  resolved through Whisparr's own lookup by their code. An exact code
+  match in the result title wins; a lone result is accepted; ambiguity
+  resolves to "not in metadata" rather than guessing. Scenes Whisparr
+  has no record of are reported as such, never force-added.
 
 ## Install
 
@@ -51,41 +48,40 @@ so Violentmonkey's update check picks up new versions automatically.
 
 From the Violentmonkey menu on any JavStash/StashDB page:
 
-- **JavArr: Configure Prowlarr** — Prowlarr URL + API key (stored in
+- **JavArr: Configure Whisparr** — Whisparr URL + API key (stored in
   Violentmonkey storage, never in the script). Required.
-- **JavArr: Configure Stash (owned badges)** — Stash URL + API key (blank
-  key if Stash auth is off). Optional; enables owned badges/checks.
-- **JavArr: Configure automation** — minimum auto-grab size (MB), batch
-  per-run scene cap.
-- **JavArr: Edit skip list** — the never-touch codes.
-
-Grabs go through Prowlarr's API (POST /api/v1/search) to whatever download
-client Prowlarr is configured with.
+- **JavArr: Configure Stash (owned badges)** — Stash URL + API key
+  (blank key if Stash auth is off). Optional; enables owned badges.
+- **JavArr: Reset Whisparr root folder / profile** — re-pick on next add.
+- **JavArr: Edit skip list** — JAV codes or StashDB scene IDs automation
+  must never add.
 
 ## Design credits
 
-Several behaviors were adapted as *ideas* from two other StashDB tools —
+Behaviors adapted as *ideas* from two other StashDB tools —
 [enymawse/stasharr](https://github.com/enymawse/stasharr) (GPL-3.0:
-scene-status awareness, exclusion lists, bulk confirmation) and
-[brewing8309/stasharr](https://github.com/brewing8309/stasharr) (PolyForm
-Noncommercial: staged escalating search, aliases/parent-studio queries,
-accent folding, Stash-owned card badges). No code was copied from either;
-this implementation is original and MIT-licensed.
+scene-status model, bulk add with confirmation, the Whisparr API shapes)
+and [brewing8309/stasharr](https://github.com/brewing8309/stasharr)
+(PolyForm Noncommercial: accent folding, Stash-owned card badges).
+No code was copied from either; this implementation is original and
+MIT-licensed. GraphQL usage is verified against the stash-box and Stash
+schemas; Whisparr calls use its Radarr-family /api/v3.
 
 ## Notes / limits
 
+- The interactive release list uses Whisparr's `release` endpoint; the
+  automatic Search button uses the verified `MoviesSearch` command.
+  If a future Whisparr build renames the release endpoint, Search keeps
+  working and the panel says so.
 - Date-style codes (1pondo, Caribbeancom) don't parse as codes; those
-  scenes fall back to literal search and manual picking.
-- Exact-match logic is strict on purpose: SSIS-0012 does not match
-  SSIS-001, and the studio prefix must agree, not just the number.
+  JavStash scenes resolve by their literal code string or not at all.
 - Owned detection keys on the stash IDs Stash recorded from the site
-  you're browsing; a scene tagged in Stash from a *different* source
-  won't badge until it carries this site's ID.
+  you're browsing.
 
 ## Tests
 
-Pure matching logic (code parsing/matching, accent folding, scoring) is
-unit-tested with plain node, no dependencies:
+Pure matching logic (code parsing/matching, accent folding, lookup
+resolution, skip list) is unit-tested with plain node, no dependencies:
 
 ```
 node tests/javarr.test.js
