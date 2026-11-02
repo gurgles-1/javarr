@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JavArr - JAV scene to Prowlarr search
 // @namespace    https://github.com/gurgles-1
-// @version      2.1.0
+// @version      2.1.1
 // @description  JavStash: auto-grab by exact code + listing batch mode. StashDB: staged escalating search with scored manual picks. Both: Prowlarr-history dedupe, skip list, Stash-owned badges. Sends grabs to Prowlarr.
 // @author       Muse for Evan
 // @match        https://javstash.org/*
@@ -257,7 +257,7 @@ async function fetchSceneMeta(id) {
   const resp = await gmFetch(location.origin + '/graphql', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: gql }),
+    data: JSON.stringify({ query: gql }),
   });
   const data = JSON.parse(resp.responseText);
   if (data?.errors?.length) throw new Error(data.errors[0].message);
@@ -289,7 +289,7 @@ async function prowlarrGrab(guid, indexerId) {
   const resp = await gmFetch(`${base}/api/v1/search?${params}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ guid, indexerId }),
+    data: JSON.stringify({ guid, indexerId }),
   });
   if (resp.status < 200 || resp.status >= 300) throw new Error(`Grab HTTP ${resp.status}`);
 }
@@ -336,7 +336,7 @@ async function stashGraphQL(query, variables) {
   const headers = { 'Content-Type': 'application/json' };
   if (CFG.stashKey) headers['ApiKey'] = CFG.stashKey;
   const resp = await gmFetch(`${CFG.stashUrl}/graphql`, {
-    method: 'POST', headers, body: JSON.stringify({ query, variables }),
+    method: 'POST', headers, data: JSON.stringify({ query, variables }),
   });
   if (resp.status !== 200) throw new Error(`Stash HTTP ${resp.status}`);
   const data = JSON.parse(resp.responseText);
